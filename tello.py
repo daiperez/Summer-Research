@@ -1,6 +1,6 @@
 
 import socket
-UDP_IP = "192.168.10.1"
+UDP_IP = "192.168.10.2"
 UDP_PORT = 8889
 
 print("Tello UDP target IP:", UDP_IP)
