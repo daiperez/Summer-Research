@@ -1,3 +1,7 @@
+//To do:
+//look into line 68 to 79 of Dawes' code
+//look into line 118 to 129 and add at the end
+
 /*------------------------------------------------------------------------------
   LIDARLite Arduino Library
   v4LED/v4LED_fast
@@ -38,6 +42,9 @@ LIDARLite_v4LED myLidarLite;
 
 #define MonitorPin    16
 #define TriggerPin    2
+#define IO_LOOP_DELAY 5000
+
+unsigned long lastUpdate = 0;
 
 int count=0;                //added
 AdafruitIO_Feed *counter = io.feed("Counter-Enter"); //added
@@ -165,6 +172,9 @@ void loop()
                 count+=1;
                 Serial.println(count);
                 counter->save(count);
+
+                lastUpdate = millis();
+                newperson = 0;
                 delay(3000);
             }
         }
