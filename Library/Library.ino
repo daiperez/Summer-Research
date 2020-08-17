@@ -27,6 +27,8 @@
 
 #include <stdint.h>
 #include <Wire.h>
+#include <Ewma.h>
+
 #include "LIDARLite_v4LED.h"
 #include "config.h"         //added
 
@@ -39,6 +41,10 @@ LIDARLite_v4LED myLidarLite;
 
 int count=0;                //added
 AdafruitIO_Feed *counter = io.feed("Counter-Enter"); //added
+
+Ewma adcFilter1(0.1);   // Less smoothing - faster to detect changes, but more prone to noise
+Ewma adcFilter2(0.01);  // More smoothing - less prone to noise, but slower to detect changes
+
 
 //---------------------------------------------------------------------
 void setup()
@@ -149,12 +155,18 @@ void loop()
     {
         if(distance < 65000){ // AMCD: added to stop sending max-distance values
             Serial.println(distance); // print measurement to serial terminal
-            //if(distance<100){
-               // Serial.print("sending->");
-                //count+=1;
-                //Serial.println(count);
-                //counter->save(count);
-                
+            float filtered1 = adcFilter1.filter(distance);
+            float filtered2 = adcFilter2.filter(distance);
+            Serial.printf("Distance=%d, Filter1=%.3f, Filter2=%.3f", distance, filtered1, filtered2);
+    
+            delay(100);
+            if(distance<100){
+                Serial.print("sending->");
+                count+=1;
+                Serial.println(count);
+                counter->save(count);
+                delay(3000);
+            }
         }
     }
 }
