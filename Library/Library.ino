@@ -1,6 +1,6 @@
 //To do:
 //look into line 68 to 79 of Dawes' code
-//look into line 118 to 129 and add at the end
+
 
 /*------------------------------------------------------------------------------
   LIDARLite Arduino Library
@@ -64,6 +64,13 @@ void setup()
     while(! Serial);                  //added
     Serial.print("Connecting to Adafruit IO"); //added
     io.connect();
+
+    // set up a message handler for the count feed.
+    // the handleMessage function (defined below)
+    // will be called whenever a message is
+    // received from adafruit io.
+    counter->onMessage(handleMessage);
+    
     while(io.status() < AIO_CONNECTED) {
     Serial.print(".");
     delay(500);
@@ -71,6 +78,8 @@ void setup()
   // we are connected
   Serial.println();
   Serial.println(io.statusText());
+
+  counter->get();
     
 
     // Initialize Arduino I2C (for communication to LidarLite)
@@ -167,14 +176,14 @@ void loop()
             Serial.printf("Distance=%d, Filter1=%.3f, Filter2=%.3f", distance, filtered1, filtered2);
     
             delay(100);
-            if(distance<100){
+            if((distance<100) && (millis() > (lastUpdate + IO_LOOP_DELAY))){
                 Serial.print("sending->");
                 count+=1;
                 Serial.println(count);
                 counter->save(count);
 
                 lastUpdate = millis();
-                newperson = 0;
+               // newperson = 0;
                 delay(3000);
             }
         }
@@ -243,4 +252,20 @@ uint8_t distanceContinuousGpio(uint16_t * distance)
     }
 
     return newDistance;
+}
+
+//---------------------------------------------------------------------
+// this function is called whenever a 'counter' message
+// is received from Adafruit IO. it was attached to
+// the counter feed in the setup() function above.
+//---------------------------------------------------------------------
+
+void handleMessage(AdafruitIO_Data *data) {
+
+  Serial.print("received <- ");
+  Serial.println(data->value());
+
+  // save IO value into local count variable
+  count = data->toInt();
+
 }
