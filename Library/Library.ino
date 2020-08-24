@@ -24,14 +24,14 @@
   680uF capacitor (+) to Arduino 5V
   680uF capacitor (-) to Arduino GND
   See the Operation Manual for wiring diagrams and more information
-------------------------------------------------------------------------------*/
+  ------------------------------------------------------------------------------*/
 
 #include <stdint.h>
 #include <Wire.h>
 #include <Ewma.h>
 
 #include "LIDARLite_v4LED.h"
-#include "config.h"         
+#include "config.h"
 
 LIDARLite_v4LED myLidarLite;
 
@@ -44,9 +44,9 @@ LIDARLite_v4LED myLidarLite;
 
 unsigned long lastUpdate = 0;
 
-int count=0;
-int prevDistance=0;                
-AdafruitIO_Feed *counter = io.feed("Counter-Enter"); 
+int count = 0;
+int prevDistance = 0;
+AdafruitIO_Feed *counter = io.feed("Counter-Enter");
 
 Ewma adcFilter1(0.1);   // Less smoothing - faster to detect changes, but more prone to noise
 Ewma adcFilter2(0.01);  // More smoothing - less prone to noise, but slower to detect changes
@@ -56,21 +56,21 @@ Ewma adcFilter2(0.01);  // More smoothing - less prone to noise, but slower to d
 void setup()
 //---------------------------------------------------------------------
 {
-    // Initialize Arduino serial port (for display of ASCII output to PC)
-    Serial.begin(115200);
+  // Initialize Arduino serial port (for display of ASCII output to PC)
+  Serial.begin(115200);
 
-    // wait for serial monitor to open
-    while(! Serial);                  
-    Serial.print("Connecting to Adafruit IO"); 
-    io.connect();
+  // wait for serial monitor to open
+  while (! Serial);
+  Serial.print("Connecting to Adafruit IO");
+  io.connect();
 
-    // set up a message handler for the count feed.
-    // the handleMessage function (defined below)
-    // will be called whenever a message is
-    // received from adafruit io.
-    counter->onMessage(handleMessage);
-    
-    while(io.status() < AIO_CONNECTED) {
+  // set up a message handler for the count feed.
+  // the handleMessage function (defined below)
+  // will be called whenever a message is
+  // received from adafruit io.
+  counter->onMessage(handleMessage);
+
+  while (io.status() < AIO_CONNECTED) {
     Serial.print(".");
     delay(500);
   }
@@ -79,70 +79,70 @@ void setup()
   Serial.println(io.statusText());
 
   counter->get();
-    
 
-    // Initialize Arduino I2C (for communication to LidarLite)
-    Wire.begin();
-    #ifdef FAST_I2C
-        #if ARDUINO >= 157
-            Wire.setClock(400000UL); // Set I2C frequency to 400kHz (for Arduino Due)
-        #else
-            TWBR = ((F_CPU / 400000UL) - 16) / 2; // Set I2C frequency to 400kHz
-        #endif
-    #endif
 
-    // ----------------------------------------------------------------------
-    // The LIDAR-Lite v4 LED is strictly a 3.3V system. The Arduino Due is a
-    // 3.3V system and is recommended for use with the LIDAR-Lite v4 LED.
-    // Care MUST be taken if connecting to a 5V system such as the Arduino Uno.
-    //
-    // I2C is a two wire communications bus that requires a pull-up resistor
-    // on each signal. In the Arduino microcontrollers the Wire.begin()
-    // function (called above) turns on pull-up resistors that pull the I2C
-    // signals up to the system voltage rail. The Arduino Uno is a 5V system
-    // and using the Uno's internal pull-ups risks damage to the LLv4.
-    //
-    // The two digitalWrite() functions (below) turn off the micro's internal
-    // pull-up resistors. This protects the LLv4 from damage via overvoltage
-    // but requires external pullups to 3.3V for the I2C signals.
-    //
-    // External pull-ups are NOT present on the Arduino Uno and must be added
-    // manually to the I2C signals. 3.3V is available on pin 2 of the 6pin
-    // "POWER" connector and can be used for this purpose. See the Uno
-    // schematic for details:
-    // https://www.arduino.cc/en/uploads/Main/arduino-uno-schematic.pdf
-    //
-    // External 1.5k ohm pull-ups to 3.3V are already present on the
-    // Arduino Due. If using the Due no further action is required
-    // ----------------------------------------------------------------------
-    digitalWrite(SCL, LOW);
-    digitalWrite(SDA, LOW);
+  // Initialize Arduino I2C (for communication to LidarLite)
+  Wire.begin();
+#ifdef FAST_I2C
+#if ARDUINO >= 157
+  Wire.setClock(400000UL); // Set I2C frequency to 400kHz (for Arduino Due)
+#else
+  TWBR = ((F_CPU / 400000UL) - 16) / 2; // Set I2C frequency to 400kHz
+#endif
+#endif
 
-    // ----------------------------------------------------------------------
-    // Optional GPIO pin assignments for measurement triggering & monitoring
-    // ----------------------------------------------------------------------
-    pinMode(MonitorPin, INPUT);
-    pinMode(TriggerPin, OUTPUT);
-    digitalWrite(TriggerPin, LOW);
+  // ----------------------------------------------------------------------
+  // The LIDAR-Lite v4 LED is strictly a 3.3V system. The Arduino Due is a
+  // 3.3V system and is recommended for use with the LIDAR-Lite v4 LED.
+  // Care MUST be taken if connecting to a 5V system such as the Arduino Uno.
+  //
+  // I2C is a two wire communications bus that requires a pull-up resistor
+  // on each signal. In the Arduino microcontrollers the Wire.begin()
+  // function (called above) turns on pull-up resistors that pull the I2C
+  // signals up to the system voltage rail. The Arduino Uno is a 5V system
+  // and using the Uno's internal pull-ups risks damage to the LLv4.
+  //
+  // The two digitalWrite() functions (below) turn off the micro's internal
+  // pull-up resistors. This protects the LLv4 from damage via overvoltage
+  // but requires external pullups to 3.3V for the I2C signals.
+  //
+  // External pull-ups are NOT present on the Arduino Uno and must be added
+  // manually to the I2C signals. 3.3V is available on pin 2 of the 6pin
+  // "POWER" connector and can be used for this purpose. See the Uno
+  // schematic for details:
+  // https://www.arduino.cc/en/uploads/Main/arduino-uno-schematic.pdf
+  //
+  // External 1.5k ohm pull-ups to 3.3V are already present on the
+  // Arduino Due. If using the Due no further action is required
+  // ----------------------------------------------------------------------
+  digitalWrite(SCL, LOW);
+  digitalWrite(SDA, LOW);
 
-    // ----------------------------------------------------------------------
-    // Optionally configure the LidarLite parameters to lend itself to
-    // various modes of operation by altering 'configure' input integer.
-    // See LIDARLite_v4LED.cpp for details.
-    // ----------------------------------------------------------------------
-    myLidarLite.configure(2);
+  // ----------------------------------------------------------------------
+  // Optional GPIO pin assignments for measurement triggering & monitoring
+  // ----------------------------------------------------------------------
+  pinMode(MonitorPin, INPUT);
+  pinMode(TriggerPin, OUTPUT);
+  digitalWrite(TriggerPin, LOW);
 
-    // ----------------------------------------------------------------------
-    // ** One method of increasing the measurement speed of the
-    //    LIDAR-Lite v4 LED is to adjust the number of acquisitions taken
-    //    per measurement from the default of 20. For max speed we
-    //    set this value to 0x00 in this example.
-    // ** Note that when reducing the number of acquisitions taken per
-    //    measurement from the default, repeatability of measurements is
-    //    reduced.
-    // ----------------------------------------------------------------------
-    //uint8_t dataByte = 0x00;
-    //myLidarLite.write(0xEB, &dataByte, 1, 0x62); // Turn off high accuracy mode
+  // ----------------------------------------------------------------------
+  // Optionally configure the LidarLite parameters to lend itself to
+  // various modes of operation by altering 'configure' input integer.
+  // See LIDARLite_v4LED.cpp for details.
+  // ----------------------------------------------------------------------
+  myLidarLite.configure(2);
+
+  // ----------------------------------------------------------------------
+  // ** One method of increasing the measurement speed of the
+  //    LIDAR-Lite v4 LED is to adjust the number of acquisitions taken
+  //    per measurement from the default of 20. For max speed we
+  //    set this value to 0x00 in this example.
+  // ** Note that when reducing the number of acquisitions taken per
+  //    measurement from the default, repeatability of measurements is
+  //    reduced.
+  // ----------------------------------------------------------------------
+  //uint8_t dataByte = 0x00;
+  //myLidarLite.write(0xEB, &dataByte, 1, 0x62); // Turn off high accuracy mode
 }
 
 
@@ -150,46 +150,46 @@ void setup()
 void loop()
 //---------------------------------------------------------------------
 {
-    // Using GPIO triggering can increase the rep rate.
-    // Remove comments from the line below to use I2C triggering.
-    // #define USE_I2C_TRIGGERING
+  // Using GPIO triggering can increase the rep rate.
+  // Remove comments from the line below to use I2C triggering.
+  // #define USE_I2C_TRIGGERING
 
-    io.run();
+  io.run();
 
-    
-    uint16_t distance;
-    uint8_t  newDistance;
 
-    #ifdef USE_I2C_TRIGGERING
-        newDistance = distanceContinuous(&distance);
-    #else
-        newDistance = distanceContinuousGpio(&distance);
-    #endif
+  uint16_t distance;
+  uint8_t  newDistance;
 
-    if (newDistance)
-    {
-            
-            
-            if((distance<100) && (millis() > (lastUpdate + IO_LOOP_DELAY))){
-              Serial.println(distance); // print measurement to serial terminal
-              float filtered1 = adcFilter1.filter(distance);
-              float filtered2 = adcFilter2.filter(distance);
-              Serial.printf("Distance=%d, Filter1=%.3f, Filter2=%.3f", distance, filtered1, filtered2);
-              delay(100);
-              if ((prevDistance - distance)> DifferenceTrigg){
-                Serial.print("sending->");
-                count+=1;
-                Serial.println(count);
-                counter->save(count);
-              }
-              
-              prevDistance = distance;
+#ifdef USE_I2C_TRIGGERING
+  newDistance = distanceContinuous(&distance);
+#else
+  newDistance = distanceContinuousGpio(&distance);
+#endif
 
-              lastUpdate = millis();
+  if (newDistance)
+  {
+    if ((distance < 100) && (millis() > (lastUpdate + IO_LOOP_DELAY))) {
+      Serial.println(distance); // print measurement to serial terminal
+      float filtered1 = adcFilter1.filter(distance);
+      float filtered2 = adcFilter2.filter(distance);
+      Serial.printf("Distance=%d, Filter1=%.3f, Filter2=%.3f", distance, filtered1, filtered2);
+      delay(100);
+      if ((prevDistance - distance) > DifferenceTrigg) {
+        Serial.print("sending->");
+        count += 1;
+        Serial.println(count);
+        counter->save(count);
+      }
+      //add if difference is the same for 5 consecutive points
+      //problem is how to get the last count value after "restarting"
 
-            }
-        
+      prevDistance = distance;
+
+      lastUpdate = millis();
+
     }
+
+  }
 }
 
 //---------------------------------------------------------------------
@@ -205,23 +205,23 @@ void loop()
 //---------------------------------------------------------------------
 uint8_t distanceContinuous(uint16_t * distance)
 {
-    uint8_t newDistance = 0;
+  uint8_t newDistance = 0;
 
-    // Check on busyFlag to indicate if device is idle
-    // (meaning = it finished the previously triggered measurement)
-    if (myLidarLite.getBusyFlag() == 0)
-    {
-        // Trigger the next range measurement
-        myLidarLite.takeRange();
+  // Check on busyFlag to indicate if device is idle
+  // (meaning = it finished the previously triggered measurement)
+  if (myLidarLite.getBusyFlag() == 0)
+  {
+    // Trigger the next range measurement
+    myLidarLite.takeRange();
 
-        // Read new distance data from device registers
-        *distance = myLidarLite.readDistance();
+    // Read new distance data from device registers
+    *distance = myLidarLite.readDistance();
 
-        // Report to calling function that we have new data
-        newDistance = 1;
-    }
+    // Report to calling function that we have new data
+    newDistance = 1;
+  }
 
-    return newDistance;
+  return newDistance;
 }
 
 //---------------------------------------------------------------------
@@ -237,23 +237,23 @@ uint8_t distanceContinuous(uint16_t * distance)
 //---------------------------------------------------------------------
 uint8_t distanceContinuousGpio(uint16_t * distance)
 {
-    uint8_t newDistance = 0;
+  uint8_t newDistance = 0;
 
-    // Check on busyFlag to indicate if device is idle
-    // (meaning = it finished the previously triggered measurement)
-    if (myLidarLite.getBusyFlagGpio(MonitorPin) == 0)
-    {
-        // Trigger the next range measurement
-        myLidarLite.takeRangeGpio(TriggerPin, MonitorPin);
+  // Check on busyFlag to indicate if device is idle
+  // (meaning = it finished the previously triggered measurement)
+  if (myLidarLite.getBusyFlagGpio(MonitorPin) == 0)
+  {
+    // Trigger the next range measurement
+    myLidarLite.takeRangeGpio(TriggerPin, MonitorPin);
 
-        // Read new distance data from device registers
-        *distance = myLidarLite.readDistance();
+    // Read new distance data from device registers
+    *distance = myLidarLite.readDistance();
 
-        // Report to calling function that we have new data
-        newDistance = 1;
-    }
+    // Report to calling function that we have new data
+    newDistance = 1;
+  }
 
-    return newDistance;
+  return newDistance;
 }
 
 //---------------------------------------------------------------------
