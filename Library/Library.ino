@@ -1,6 +1,3 @@
-//To do:
-//look into line 68 to 79 of Dawes' code
-
 
 /*------------------------------------------------------------------------------
   LIDARLite Arduino Library
@@ -34,7 +31,7 @@
 #include <Ewma.h>
 
 #include "LIDARLite_v4LED.h"
-#include "config.h"         //added
+#include "config.h"         
 
 LIDARLite_v4LED myLidarLite;
 
@@ -43,11 +40,13 @@ LIDARLite_v4LED myLidarLite;
 #define MonitorPin    16
 #define TriggerPin    2
 #define IO_LOOP_DELAY 5000
+#define DifferenceTrigg 50
 
 unsigned long lastUpdate = 0;
 
-int count=0;                //added
-AdafruitIO_Feed *counter = io.feed("Counter-Enter"); //added
+int count=0;
+int prevDistance=0;                
+AdafruitIO_Feed *counter = io.feed("Counter-Enter"); 
 
 Ewma adcFilter1(0.1);   // Less smoothing - faster to detect changes, but more prone to noise
 Ewma adcFilter2(0.01);  // More smoothing - less prone to noise, but slower to detect changes
@@ -61,8 +60,8 @@ void setup()
     Serial.begin(115200);
 
     // wait for serial monitor to open
-    while(! Serial);                  //added
-    Serial.print("Connecting to Adafruit IO"); //added
+    while(! Serial);                  
+    Serial.print("Connecting to Adafruit IO"); 
     io.connect();
 
     // set up a message handler for the count feed.
@@ -169,24 +168,27 @@ void loop()
 
     if (newDistance)
     {
-        if(distance < 65000){ // AMCD: added to stop sending max-distance values
-            Serial.println(distance); // print measurement to serial terminal
-            float filtered1 = adcFilter1.filter(distance);
-            float filtered2 = adcFilter2.filter(distance);
-            Serial.printf("Distance=%d, Filter1=%.3f, Filter2=%.3f", distance, filtered1, filtered2);
-    
-            delay(100);
+            
+            
             if((distance<100) && (millis() > (lastUpdate + IO_LOOP_DELAY))){
+              Serial.println(distance); // print measurement to serial terminal
+              float filtered1 = adcFilter1.filter(distance);
+              float filtered2 = adcFilter2.filter(distance);
+              Serial.printf("Distance=%d, Filter1=%.3f, Filter2=%.3f", distance, filtered1, filtered2);
+              delay(100);
+              if ((prevDistance - distance)> DifferenceTrigg){
                 Serial.print("sending->");
                 count+=1;
                 Serial.println(count);
                 counter->save(count);
+              }
+              
+              prevDistance = distance;
 
-                lastUpdate = millis();
-               // newperson = 0;
-                delay(3000);
+              lastUpdate = millis();
+
             }
-        }
+        
     }
 }
 
